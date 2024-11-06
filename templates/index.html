@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacientes - Hospital</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Inicio</a>
+        <a href="{{ url_for('crear') }}">Crear Paciente</a>
+        <a href="{{ url_for('listar') }}">Listar Pacientes</a>
+    </nav>
+
+    <main>
+        <h1>Lista de Pacientes</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Edad</th>
+                    <th>Género</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for paciente in pacientes %}
+                <tr>
+                    <td>{{ paciente.nombre }}</td>
+                    <td>{{ paciente.apellido }}</td>
+                    <td>{{ paciente.edad }}</td>
+                    <td>{{ paciente.genero }}</td>
+                    <td>
+                        <a href="{{ url_for('editar', id=paciente.id) }}">Editar</a>
+                        <a href="{{ url_for('eliminar', id=paciente.id) }}" onclick="return confirm('¿Seguro que quieres eliminar?')">Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

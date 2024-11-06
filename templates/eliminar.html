@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Paciente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Inicio</a>
+        <a href="{{ url_for('crear') }}">Crear Paciente</a>
+        <a href="{{ url_for('listar') }}">Listar Pacientes</a>
+    </nav>
+
+    <main>
+        <h1>¿Seguro que deseas eliminar este paciente?</h1>
+        <p>Esta acción no se puede deshacer.</p>
+        <form action="{{ url_for('eliminar', id=paciente.id) }}" method="POST">
+            <button type="submit">Eliminar</button>
+            <a href="{{ url_for('index') }}">Cancelar</a>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Paciente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="{{ url_for('index') }}">Inicio</a>
+        <a href="{{ url_for('crear') }}">Crear Paciente</a>
+        <a href="{{ url_for('listar') }}">Listar Pacientes</a>
+    </nav>
+
+    <main>
+        <h1>Crear Paciente</h1>
+        <form action="{{ url_for('crear') }}" method="POST">
+            <label for="nombre">Nombre:</label><br>
+            <input type="text" name="nombre" required><br>
+            <label for="apellido">Apellido:</label><br>
+            <input type="text" name="apellido" required><br>
+            <label for="edad">Edad:</label><br>
+            <input type="number" name="edad" required><br>
+            <label for="genero">Género:</label><br>
+            <input type="text" name="genero" required><br>
+            <label for="direccion">Dirección:</label><br>
+            <input type="text" name="direccion" required><br>
+            <label for="telefono">Teléfono:</label><br>
+            <input type="text" name="telefono" required><br>
+            <button type="submit">Crear Paciente</button>
+        </form>
+    </main>
+</body>
+</html>
