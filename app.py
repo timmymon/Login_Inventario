@@ -1,123 +1,95 @@
-from flask import Flask, render_template, request, redirect, url_for
-import mysql.connector
-from db_config import get_db_connection
+from flask import Flask, render_template, redirect, request, session
+import pymysql
+import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+UPLOAD_FOLDER = 'static/images'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-# Página principal (mostrar todos los pacientes)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+db_host = 'localhost'
+db_user = 'root'
+db_password = ''
+db_name = 'hospital_db'
+
+def get_db_connection():
+    return pymysql.connect(host=db_host, user=db_user, password=db_password, database=db_name)
+
+def get_all_products():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM products")
+        products = cursor.fetchall()
+    finally:
+        conn.close()
+    return products
+
+def create_product(name, description, price, quantity, image):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO products (name, description, price, quantity, image) VALUES (%s, %s, %s, %s, %s)", 
+                       (name, description, price, quantity, image))
+        conn.commit()
+    finally:
+        conn.close()
+
 @app.route('/')
 def index():
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM pacientes")
-        pacientes = cursor.fetchall()
-    except mysql.connector.Error as err:
-        print(f"Error de conexión a la base de datos: {err}")
-        return "Error al conectar con la base de datos."
-    finally:
-        cursor.close()
-        connection.close()
-    return render_template('index.html', pacientes=pacientes)
+    return redirect('/login')
 
-# Crear paciente
-@app.route('/crear', methods=['GET', 'POST'])
-def crear():
+@app.route('/login', methods=['GET', 'POST'])
+def login():
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        apellido = request.form['apellido']
-        edad = request.form['edad']
-        genero = request.form['genero']
-        direccion = request.form['direccion']
-        telefono = request.form['telefono']
-        
-        # Validación básica de campos
-        if not nombre or not apellido or not edad or not genero or not direccion or not telefono:
-            return "Todos los campos son obligatorios", 400  # Error 400 por solicitud incorrecta
-
+        username = request.form['username']
+        password = request.form['password']
         try:
-            connection = get_db_connection()
-            cursor = connection.cursor()
-            cursor.execute('''INSERT INTO pacientes (nombre, apellido, edad, genero, direccion, telefono)
-                              VALUES (%s, %s, %s, %s, %s, %s)''', 
-                           (nombre, apellido, edad, genero, direccion, telefono))
-            connection.commit()
-        except mysql.connector.Error as err:
-            print(f"Error de base de datos: {err}")
-            return "Error al insertar el paciente."
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM usuarios WHERE username = %s AND password = %s", (username, password))
+            user = cursor.fetchone()
         finally:
-            cursor.close()
-            connection.close()
+            conn.close()
+        if user:
+            session['user'] = username
+            return redirect('/inventory')
+    return render_template('login.html')
 
-        return redirect(url_for('index'))
-    
-    return render_template('crear.html')
+@app.route('/inventory', methods=['GET'])
+def inventory():
+    if 'user' in session:
+        products = get_all_products()
+        return render_template('inventory.html', products=products)
+    else:
+        return redirect('/login')
 
-# Editar paciente
-@app.route('/editar/<int:id>', methods=['GET', 'POST'])
-def editar(id):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM pacientes WHERE id = %s", (id,))
-        paciente = cursor.fetchone()
-    except mysql.connector.Error as err:
-        print(f"Error de base de datos: {err}")
-        return "Error al consultar el paciente."
-    finally:
-        cursor.close()
-        connection.close()
-
-    if paciente is None:
-        return redirect(url_for('index'))
-
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        apellido = request.form['apellido']
-        edad = request.form['edad']
-        genero = request.form['genero']
-        direccion = request.form['direccion']
-        telefono = request.form['telefono']
-        
-        # Validación básica de campos
-        if not nombre or not apellido or not edad or not genero or not direccion or not telefono:
-            return "Todos los campos son obligatorios", 400
-
-        try:
-            connection = get_db_connection()
-            cursor = connection.cursor()
-            cursor.execute('''UPDATE pacientes
-                              SET nombre = %s, apellido = %s, edad = %s, genero = %s, direccion = %s, telefono = %s
-                              WHERE id = %s''', 
-                           (nombre, apellido, edad, genero, direccion, telefono, id))
-            connection.commit()
-        except mysql.connector.Error as err:
-            print(f"Error de base de datos: {err}")
-            return "Error al actualizar el paciente."
-        finally:
-            cursor.close()
-            connection.close()
-
-        return redirect(url_for('index'))
-
-    return render_template('editar.html', paciente=paciente)
-
-# Eliminar paciente
-@app.route('/eliminar/<int:id>', methods=['GET'])
-def eliminar(id):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM pacientes WHERE id = %s", (id,))
-        connection.commit()
-    except mysql.connector.Error as err:
-        print(f"Error de base de datos: {err}")
-        return "Error al eliminar el paciente."
-    finally:
-        cursor.close()
-        connection.close()
-
-    return redirect(url_for('index'))
+@app.route('/inventory/create', methods=['GET', 'POST'])
+def create_product_route():
+    if 'user' in session:
+        if request.method == 'POST':
+            product_name = request.form['product_name']
+            description = request.form['description']
+            price = request.form['price']
+            quantity = request.form['quantity']
+            image = request.files['image']
+            
+            if image and allowed_file(image.filename):
+                filename = secure_filename(image.filename)
+                image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                image.save(image_path)
+                create_product(product_name, description, price, quantity, filename)
+                return redirect('/inventory')
+        return render_template('create_product.html')
+    else:
+        return redirect('/login')
 
 if __name__ == '__main__':
     app.run(debug=True)
